@@ -1,0 +1,140 @@
+#+ORG2BLOG:
+#+DATE: [2025-05-29 gio 16:47]
+#+OPTIONS: toc:nil num:nil todo:nil pri:nil tags:nil ^:nil
+#+CATEGORY: Language learning
+#+TAGS: Python
+#+DESCRIPTION:
+#+TITLE: Developing python containers, simplified
+* Developing containers
+When I develop a containerized service I want to:
+- easily edit the code
+- easily run unit tests
+- easily launch interactive sessions for debug
+
+I've tried various solutions in the past with different degrees of success and effort
+- create a development image which mounts an external directory
+  - connect to an shell into the development container to launch application and tests
+- create an interactive development with jupyter lab
+  - connect to a shell from a web browser and edit files from it
+- create an image to launch unit tests
+And some more combination of this kind.
+
+My development cycle was slow due to
+- the limited amount of tools available in the image
+- multiple image building to run test and to create the production image
+
+This has been very frustrating until recently
+* Hatch
+I tried Poetry for a while in my development and it worked great
+
+I won't go in all of the details that made me choose Hatch for this task; I will
+just list which features I use the most
+
+- automatic virtual environment creation to launch the application
+- automatic test virtual environments
+- test grids with different python versions
+- fast format (black) and lint (ruff)
+- easy upload of packages in our private pip repositories
+- stick to the basic ~pyproject.toml~ layout
+
+This worked well also for some apps running on both windows and linux.
+
+* My workflow
+I develop everything in my host machine (which is a linux box or VM) with my tools of choice (emacs)
+
+App execution is performed via
+#+begin_src bash
+hatch run python -m mypackage
+#+end_src
+
+Tests are performed with the great ~pytest~ library
+
+App tests are performed via
+#+begin_src bash
+hatch test
+#+end_src
+
+which may have also the usual pytest arguments and flags
+
+#+begin_src bash
+hatch test -n auto tests/test_one_file.py -k regex_methods
+#+end_src
+
+Usually I wrap these commands in convenient scripts e.g.
+#+begin_src bash
+#!env bash
+# move to script directory, assuming it is
+# the project root
+cd $(dirname $0)
+
+# add the src directory if this is your layout
+export PYTHONPATH=src
+
+# read an env file in case
+set -o allexport
+source .env
+set +o allexport
+
+# launch the app
+hatch run python -m app
+#+end_src
+
+finally create a ~Dockerfile~; this may look like this
+#+begin_src Dockerfile
+FROM python:3.12-slim
+COPY pyproject.toml
+COPY src
+RUN pip install .
+# add a CMD here
+#+end_src
+and a ~compose.yaml~
+#+begin_src yaml
+services:
+  myproject:
+    image: myproject:${VERSION}
+    env_file: .env
+#+end_src
+to test the image in the local docker service before deploying
+
+I can add this in the scripts to get the version from python
+#+begin_src bash
+export VERSION=$(hatch version)
+#+end_src
+* Using PIP for tests
+
+Hatch uses UV as a default package manager when creating virtual environments
+for test unless you tell to do it differently
+
+While UV is a great tool I want to use the same global pip configuration as
+- within my company's premises it exposes a path to my CA certificates
+- add some private pip repos
+
+I added this snippet to my ~project.toml~ to have this working
+
+#+begin_src toml
+[tool.hatch.envs.hatch-test]
+installer="pip"
+#+end_src
+* Pip is missing in my virtual environment
+Sometime these environment are created without the pip package
+1. find where your hatch environment are
+   a) launch python
+#+begin_src bash
+hatch run python
+#+end_src
+   b) chech the import paths
+#+begin_src python
+import sys
+print(sys.path)
+#+end_src
+2. activate your test environment
+#+begin_src bash
+source ~/.local/share/harch/env/my_project/hatch-test.py3.12/bin/activate
+#+end_src
+3. force pip installation
+#+begin_src bash
+python -m enusrepip
+#+end_src
+* Conclusion
+This workflow fits most of the containerized applications I'm currently working
+on, and speeds up my development cycle.
