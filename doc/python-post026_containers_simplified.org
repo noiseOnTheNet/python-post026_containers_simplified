@@ -5,6 +5,8 @@
 #+TAGS: Python
 #+DESCRIPTION:
 #+TITLE: Developing python containers, simplified
+file:images/frank-mckenna-tjX_sniNzgQ-unsplash.jpg
+
 Photo by [[https://unsplash.com/@frankiefoto?utm_content=creditCopyText&utm_medium=referral&utm_source=unsplash][frank mckenna]] on [[https://unsplash.com/photos/assorted-color-filed-intermodal-containers-tjX_sniNzgQ?utm_content=creditCopyText&utm_medium=referral&utm_source=unsplash][Unsplash]]
 
 * Developing containers
